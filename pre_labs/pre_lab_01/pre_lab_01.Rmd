@@ -51,7 +51,7 @@ number * number
 
 What does it return? Type your answer below:
 
-**Answer:**
+**Answer:4**
 
 ### Task 3: Install packages
 **Task** In the console, run the following code to install the Tidyverse:
@@ -137,7 +137,7 @@ ppp_maryland_loans %>%
   summarise(
     count_loans = n()
   ) %>%
-  arrange(desc(count_loans))
+  arrange(count_loans)
 ```
 Which county has the most loans?  Put your answer in the space below.
 **Answer**
