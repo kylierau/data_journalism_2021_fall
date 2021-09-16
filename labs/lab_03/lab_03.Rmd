@@ -14,9 +14,11 @@ knitr::opts_chunk$set(echo = TRUE)
 # Turn off scientific notation
 options(scipen=999)
 
-# Load the tidyverse here
+# Load the tidyverse   
+library(tidyverse)
 
 # Load janitor here
+library(janitor)
 
 ```
 
@@ -25,20 +27,41 @@ options(scipen=999)
 # Write code to load the WV slice of the ppp loan data here and call it wv_ppp_loans.
 # The data is called lab_03.rds, and is in the same folder as lab_03.Rmd (this data notebook)
 
+wv_ppp_loans <- read_rds("lab_03.rds")
 
 ```
 
 ## Answer questions
 
 Q1: Which five cities located in Kanawha County, West Virginia got the most loans (in number of loans)? How many did each get? To answer this question, you'll have to clean the very messy "city" field.
+The cities in Kanawha County with the most loans include Charleston with 2837 South Charleston with 484 Saint Albans with 304, Dunbar with 166 and Nitro with 142. 
 
 Note: To answer this question, please fully clean the city field for Kanawha County cities. Hint: once cleaned, the dataframe that counts the number of loans by city should have 38 distinct cities for Kanawha County.
 
 A1:
 ```{r}
-
-# Write your code in this codeblock.
-
+cleaned_wv_ppp_loans <- wv_ppp_loans %>%
+  filter(project_county_name == 'KANAWHA') %>%
+  mutate(city = str_to_title(city)) %>%
+  mutate(city = case_when(
+    city == "S Charleston" ~ "South Charleston",
+    city == "Charelston" ~ "Charleston",
+    city == "So Charleston" ~ "South Charleston",
+    city == "St Albans" ~ "Saint Albans",
+    city == "St. Albans" ~ "Saint Albans",
+    city == "St.albans" ~ "Saint Albans",
+    city == "crosslanes" ~ "Cross Lanes",
+    city == "Crosslanes" ~ "Cross Lanes",
+    city == "Elkveiw" ~ "Elkview",
+    city == "Belle" ~ "Balle",
+    TRUE ~ city
+  ) ) %>%
+  group_by(city) %>%
+  summarise(
+    total_loans = n()
+  ) %>%
+  arrange(desc(total_loans))
+cleaned_wv_ppp_loans
 ```
 
 Q2: What is the name of the business that got the largest loan (by dollar value) in the 5-digit ZIP code in West Virginia that had the highest dollar amount in total loans (by dollar value)? Write up a short paragraph that also answers these questions:
@@ -48,16 +71,27 @@ Q2: What is the name of the business that got the largest loan (by dollar value)
 * How much of that loan was forgiven?
 * Which number is bigger, the loan amount or the forgiveness amount? Can you explain the discrepancy?
 
-A2: 
+A2: JACKSON KELLY PLLC is the business that got the largest loan in the zip code 25301. This zip code is located in Kanawha County, West Virginia. The businesses' loan was for 5068472 dollars. 5126618.64 dollars were forgiven which is greater than the initial loan amount. This could be due to interest. for example, if you pay a 1 percent interest rate over 9 months and it is forgiven.    
 
 ```{r}
-# Hint
-# First, create a dataframe that shows the top 5-digit ZIP code by total dollar amount
-# Second, use the top ZIP code to create a separate dataframe that shows the business with the biggest loan in that ZIP code.
+wv_ppp_loans %>%
+    mutate(amount = as.numeric(amount)) %>%
+    distinct() %>%
+      mutate(zip = str_sub(zip, start=1L, end=5L)) %>%
+  group_by(zip) %>%
+  summarise(
+    amount= sum(amount)) %>%
+arrange(desc(amount))
+
+wv_ppp_loans %>%
+  mutate(zip = str_sub(zip, start=1L, end=5L)) %>%
+filter(zip == '25301') %>%
+  arrange(desc(amount))
 
 ```
 
 Q3: Five business entities owned by the spouse of a member of West Virginia's U.S. House delegation got PPP loans. Write up a paragraph that answers the following questions.   
+The businesses owned by Carol Miller include DM Motors, Dutch Miller Chevrolet, Dutch Miller of Charleston Dutch Miller of Charlotte, Dutch Miller Subaru owned by her husband Matthew Miller. These are car dealerships. 
 
   * What are the businesses' names?
   * What do the businesses do?
@@ -85,5 +119,18 @@ A3:
 # Hint
 # First, create a dataframe that only has loans to those five companies
 # Second, use that newly created dataframe to calculate total loan amount and percentage forgiven for those companies
+wv_ppp_loans %>%
+    mutate(name = str_to_title(name)) %>%
+    filter(
+      name == 'DM MOTORS'
+      TRUE ~ name  %>%
+  group_by(name) %>%
+  summarise(
+    total_loans = n()
+  ) %>%
+  arrange(desc(total_loans))
+cleaned_wv_ppp_loans
+  
+
 
 ```
