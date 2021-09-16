@@ -120,16 +120,7 @@ A3:
 # First, create a dataframe that only has loans to those five companies
 # Second, use that newly created dataframe to calculate total loan amount and percentage forgiven for those companies
 wv_ppp_loans %>%
-    mutate(name = str_to_title(name)) %>%
-    filter(
-      name == 'DM MOTORS'
-      TRUE ~ name  %>%
-  group_by(name) %>%
-  summarise(
-    total_loans = n()
-  ) %>%
-  arrange(desc(total_loans))
-cleaned_wv_ppp_loans
+    filter(str_detect(name , "DUTCH MILLER|DM MOTOR"))
   
 
 
