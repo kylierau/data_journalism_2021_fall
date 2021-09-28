@@ -121,7 +121,5 @@ A3:
 # Second, use that newly created dataframe to calculate total loan amount and percentage forgiven for those companies
 wv_ppp_loans %>%
     filter(str_detect(name , "DUTCH MILLER|DM MOTOR"))
-  
-
 
 ```
