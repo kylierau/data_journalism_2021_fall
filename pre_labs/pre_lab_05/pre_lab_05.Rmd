@@ -35,7 +35,7 @@ library(refinr)
 
 ### Task 3: Load data
 **Task** Run the following code to load the zipped-up Maryland PPP loans data. How many records are in this table?
-**Answer**
+**Answer**There are 195,865 records in this table. 
 
 ```{r}
 # Load data
@@ -48,7 +48,7 @@ md_loans
 
 ### Task 4: Group and count to identify problems in city column
 **Task** Run the following code to group and count records in the city column, and filter to examine only cities that start with A. Name a problem that you see that is preventing proper grouping.
-**Answer**
+**Answer**A problem that prevents proper grouping is how many different variations of city names there are. These include differences mistakes in spelling, capitalization, abbreviations and more. 
 
 ```{r}
 # Now let's try and group and count the number of loans by city. To make it a bit more managable, let's use another string function from `stringr` and filter for cities that start with the uppercase "A" or lowercase "a" using the function `str_detect()` with a regular expression.  
@@ -66,7 +66,7 @@ md_loans %>%
 
 ### Task 5: Use refinr to clean the city_clean field. 
 **Task** Run the following code to make a copy of the city field called city_clean, then use the `key_collision_merge` function from refinr to attempt to standarize similar values. Store it as a new object called clean_md_loans.  Click the black arrow on the table to examine the city and city_clean columns.  Looking at the results on the first page only (first 10 rows), name two changes the refinr package made, by comparing city to city_clean.
-**Answer**
+**Answer** The package merged some of the repeated cities together within the data by changing some capitalization errors. It also caught some abbreviations and merged them with the full versions of their city name. 
 
 ```{r}
 cleaned_md_loans <- md_loans %>%
