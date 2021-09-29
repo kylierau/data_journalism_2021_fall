@@ -79,7 +79,7 @@ cleaned_md_loans
 
 ### Task 6: Filter cleaned_md_loans to examine cities that start with A 
 **Task** Run the following code to group by city_clean and city, then filter for cities that start with A. Name three changes the refinr function made.  
-**Answer**
+**Answer** THree changes the refinr function made include changing 'ABELL'to Abell, changing 'ABERDEEN' to 'Aberdeen'and changing 'annapolis' to 'Annapolis'. These are all examples that show howo the refinr function cleans data through changing capitalization. 
 
 ```{r}
 cleaned_md_loans %>%
@@ -92,7 +92,7 @@ cleaned_md_loans %>%
 ```
 ### Task 7: Use a different refinr method to clean the city_clean field. 
 **Task** Run the following code to use the n_gram_merge() function to clean the data, then group by city_clean and city to examine cities that start with A. Look at the differences. Does the changes it made vary substantially from the previous use of key_collision_merge?
-**Answer**
+**Answer** No, the changes it made do not vary substantially from the previous use of key_collision_merge. 
 
 ```{r}
 cleaned_md_loans <- md_loans %>%
