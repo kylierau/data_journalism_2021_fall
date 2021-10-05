@@ -156,7 +156,8 @@ Hint: you will not find the answers to the last three questions in the data.  Yo
 ```{r}
 berkeley_naics %>%
   filter(city == "martinsburg" ) %>%
-  filter(title == "Full-Service Restaurants")
+  filter(title == "Full-Service Restaurants") %>%
+arrange(desc(amount))
 
 
 ```
