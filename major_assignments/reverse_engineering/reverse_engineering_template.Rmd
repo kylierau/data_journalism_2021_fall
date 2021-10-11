@@ -44,9 +44,8 @@ In this section, describe the source of the data, write a basic data dictionary 
 # Path to data should be loaded from folder "data" i.e. read_csv("data/name_of_data.csv")
 
 # Clean required data and prepare for analysis if needed. 
-allegations <- read_csv("data/allegations_202007271729.csv")
-allegations <- read_csv("data/CCRB-Complaint-Data_202007271729.csv")
-
+allegations <- read_csv("data/CCRB-Complaint-Data_202007271729/allegations_202007271729.csv")
+allegation_description <- read_excel("data/CCRB-Complaint-Data_202007271729/ccrb_data_layout_table.xlsx")
 
 ```
 
@@ -57,17 +56,49 @@ In this notebook, we are reverse engineering five sentences from the story.
 
 * **Sentence text**: “A dozen of those high-ranking officers have three or more complaints with substantiated allegations; 10 are white. Five have reached the rank of deputy inspector, the lowest promoted at the commissioner’s discretion; all are white.”
 
-* **Analysis summary**: We used code to filter out the specific data woven throughout this sentence("substantiated allegations", "10 are white", "rank of deputy inspector"). This allowed us to narrow down our data and determine how the data was organized for analysis in this article. This narrowed our code to reutrning 69 rows of information. 
+* **Analysis summary**: We used code to filter out the specific data woven throughout this sentence("substantiated allegations", "10 are white", "rank of deputy inspector"), which allowed us to narrow down and determine how the data was organized for analysis in this article. We initially narrowed our code by filtering by ethnicity which returned 69 rows of information. We then determined that we needed to further narrow the data by 'rank_now' and 'board_disposition', which enabled us to confirm the finding and successfully reverse engineer our first section of this story.
 
 ```{r}
 allegations %>%
   filter(mos_ethnicity == "White" ) %>%
-  filter(rank_now == "Deputy Inspector") %>%
-  filter(board_disposition == "Substantiated (Command Lvl Instructions)" | board_disposition == "Substantiated (Charges)" | board_disposition == "Substantiated (Command Discipline A)" | board_disposition == "Substantiated (Formalized Training)" | board_disposition == "Substantiated (Command Discipline B)" | board_disposition == "Substantiated (Instructions)" | board_disposition == "Substantiated (Command Discipline)" | board_disposition == "Substantiated (Command Discipline)") %>%
+  filter(rank_now == "Deputy Inspector" | rank_now == "Inspector" | rank_now == "Deputy Chief" | rank_now == "Assistant Chief" | rank_now == "Bureau Chief" | rank_now == "Police Commissioner" | rank_now == "Chiefs and other ranks" ) %>%
+  filter(board_disposition == "Substantiated (Command Lvl Instructions)" |  board_disposition == "Substantiated (Charges)" | board_disposition == "Substantiated (Command Discipline A)" | board_disposition == "Substantiated (Formalized Training)" | board_disposition == "Substantiated (Command Discipline B)" | board_disposition == "Substantiated (Instructions)" | board_disposition == "Substantiated (Command Discipline)" | board_disposition == "Substantiated (Command Discipline)") %>%
 group_by(unique_mos_id, first_name, last_name, rank_now, mos_ethnicity) %>%
 summarize(
 count = n()) %>%
 arrange(desc(count))
+
+highrankallegations <- allegations %>%
+filter(rank_now == "Deputy Inspector" |
+rank_now == "Inspector" |
+rank_now == "Deputy Chief" |
+rank_now == "Assistant Chief" |
+rank_now == "Bureau Chief" |
+rank_now == "Police Commissioner" |
+rank_now == "Chiefs and other ranks" ) %>%
+
+
+filter(board_disposition == "Substantiated (Command Lvl Instructions)" |
+board_disposition == "Substantiated (Charges)" |
+board_disposition == "Substantiated (Command Discipline A)" |
+board_disposition == "Substantiated (Formalized Training)" |
+board_disposition == "Substantiated (No Recommendations)" |
+board_disposition == "Substantiated (Command Discipline B)" |
+board_disposition == "Substantiated (Instructions)" |
+board_disposition == "Substantiated (Command Discipline)" |
+board_disposition == "Substantiated (Command Discipline)") %>%
+group_by(unique_mos_id, first_name, last_name, rank_now, mos_ethnicity) %>% 
+summarize(
+count = n()) %>%
+arrange(desc(count))
+
+
+highrankallegations %>%
+filter(mos_ethnicity == "White")
+
+highrankallegations %>%
+filter(mos_ethnicity == "White",
+rank_now == "Deputy Inspector")
 
 ```
 
