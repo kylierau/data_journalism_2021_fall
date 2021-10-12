@@ -61,46 +61,36 @@ In this notebook, we are reverse engineering five sentences from the story.
 We got 25 total >3 allegations, 17 who were white, and there was 1 Hispanic officer who held the title of Deputy Inspector
 
 ```{r}
-allegations %>%
-  filter(mos_ethnicity == "White" ) %>%
-  filter(rank_now == "Deputy Inspector" | rank_now == "Inspector" | rank_now == "Deputy Chief" | rank_now == "Assistant Chief" | rank_now == "Bureau Chief" | rank_now == "Police Commissioner" | rank_now == "Chiefs and other ranks" ) %>%
-  filter(board_disposition == "Substantiated (Command Lvl Instructions)" |  board_disposition == "Substantiated (Charges)" | board_disposition == "Substantiated (Command Discipline A)" | board_disposition == "Substantiated (Formalized Training)" | board_disposition == "Substantiated (Command Discipline B)" | board_disposition == "Substantiated (Instructions)" | board_disposition == "Substantiated (Command Discipline)" | board_disposition == "Substantiated (Command Discipline)") %>%
-group_by(unique_mos_id, first_name, last_name, rank_now, mos_ethnicity) %>%
-summarize(
-count = n()) %>%
-arrange(desc(count))
-
+# Put code to reverse engineer sentence here
+#glimpsing to find rows
+glimpse(allegations)
+# filtering !
+## text says ranks above captain, so not including those. 
+## below is high-ranking officers with complaints:
 highrankallegations <- allegations %>%
-filter(rank_now == "Deputy Inspector" |
-rank_now == "Inspector" |
-rank_now == "Deputy Chief" |
-rank_now == "Assistant Chief" |
-rank_now == "Bureau Chief" |
-rank_now == "Police Commissioner" |
-rank_now == "Chiefs and other ranks" ) %>%
-
-
-filter(board_disposition == "Substantiated (Command Lvl Instructions)" |
-board_disposition == "Substantiated (Charges)" |
-board_disposition == "Substantiated (Command Discipline A)" |
-board_disposition == "Substantiated (Formalized Training)" |
-board_disposition == "Substantiated (No Recommendations)" |
-board_disposition == "Substantiated (Command Discipline B)" |
-board_disposition == "Substantiated (Instructions)" |
-board_disposition == "Substantiated (Command Discipline)" |
-board_disposition == "Substantiated (Command Discipline)") %>%
-group_by(unique_mos_id, first_name, last_name, rank_now, mos_ethnicity) %>% 
-summarize(
-count = n()) %>%
-arrange(desc(count))
-
-
-highrankallegations %>%
-filter(mos_ethnicity == "White")
-
-highrankallegations %>%
-filter(mos_ethnicity == "White",
-rank_now == "Deputy Inspector")
+filter(rank_now == "Deputy Inspector" | 
+        rank_now == "Inspector" | 
+        rank_now == "Deputy Chief" | 
+        rank_now == "Assistant Chief" | 
+        rank_now == "Bureau Chief" | 
+        rank_now == "Police Commissioner" | 
+        rank_now == "Chiefs and other ranks" ) %>%
+filter(clean_disposition == "Substantiated") %>%
+  group_by(unique_mos_id, first_name, last_name, rank_now, mos_ethnicity) %>% ## this part is where it tells you how many each officer got (looking for 3 or more complaints!)  
+  summarize(
+    count = n())  %>%
+    arrange(desc(count)) %>%
+    filter(count > 2)
+highrankallegations
+#according to above, 25 officers had 3 or more complaints
+## filter by race (# of white officers)
+highrankallegations %>% 
+  filter(mos_ethnicity == "White")
+#above shows 17 white officers. 
+## those that reached deputy inspector 
+highrankallegations %>% 
+  filter(rank_now == "Deputy Inspector")
+# Display results of code below this codeblock 
 
 ```
 
@@ -112,9 +102,21 @@ rank_now == "Deputy Inspector")
 
 ```{r}
 # Put code to reverse engineer sentence here
-
+#what are the ranks
+glimpse(allegations$rank_now)
+# finding the sustained allegations 
+allegations %>%
+filter(rank_now == "Captain" | 
+         rank_now == "Deputy Inspector" | 
+         rank_now == "Inspector" | 
+         rank_now == "Deputy Chief" | 
+         rank_now == "Assistant Chief" | 
+         rank_now == "Bureau Chief" | 
+         rank_now == "Police Commissioner" | 
+         rank_now == "Chiefs and other ranks") %>% 
+filter(clean_disposition == "Substantiated")
+#finding the specific incident (what occurred)
 # Display results of code below this codeblock
-
 ```
 
 ### Sentence 3
@@ -125,8 +127,23 @@ rank_now == "Deputy Inspector")
 * **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
 
 ```{r}
-# Put code to reverse engineer sentence here
-
+cchrisallegations <- allegations %>% 
+  filter(last_name == "Mccormack",
+         first_name == "Christophe") %>% 
+   group_by(unique_mos_id, first_name, last_name, allegation) %>% 
+    summarize(
+    count = n())  %>%
+    arrange(desc(count))
+chrisallegations
+## shows 26 separate allegations
+allegations %>% 
+  filter(last_name == "Mccormack",
+         first_name == "Christophe") %>% 
+  group_by(clean_disposition) %>% 
+   summarize(
+    count = n())  %>%
+    arrange(desc(count)) 
+  
 # Display results of code below this codeblock
 
 ```
@@ -138,10 +155,16 @@ rank_now == "Deputy Inspector")
 * **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
 
 ```{r}
-# Put code to reverse engineer sentence here
-
-# Display results of code below this codeblock
-
+#make new dataset that gives total number of officers with at least one substantiated complaints
+officers_with_complaints <- cleaned_allegations %>%
+  filter(cleaned_board_disposition == "Substantiated") %>%
+  distinct(unique_mos_id, first_name, last_name, rank_now)
+#number of officers with at least one substantiated complaint/total number of officers
+officers_with_complaints %>%
+    summarize(
+      total = n()/36000
+    ) 
+#1 in 9 = .1111
 ```
 
 ### Sentence 5
@@ -152,7 +175,13 @@ rank_now == "Deputy Inspector")
 
 ```{r}
 # Put code to reverse engineer sentence here
-
+cleaned_allegations %>%
+  filter(rank_above_captain == "Yes") %>%
+ group_by(unique_mos_id, first_name, last_name, rank_now, mos_ethnicity) %>%
+ summarize(
+    total_allegations = n()
+  ) %>%
+  arrange(desc(total_allegations))
 # Display results of code below this codeblock
 
 ```
