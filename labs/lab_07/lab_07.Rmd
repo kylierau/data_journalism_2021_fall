@@ -86,45 +86,35 @@ Q6. What might explain why, according to this site, the DOJ has filed PPP-relate
 A6. One reason why the DOJ could have filed PPP-related fraud cases in less than half of the country's judicial districts is population distribution. Another reason that the DOJ might have filed PPP-related fraud cases in less than half of the country's judicial districts is due to the different levels of courts.
 
 Q7. Which state had the most approved PPP loans per 100,000 population? [This web page](https://smussenden.github.io/coursefiles/ppp_scraping_example/index.html) has links to 52 individual web pages, one for each state (plus Washington, D.C. and Puerto Rico). Each of those web pages contains a one-row html table that has the name of the state, the number of approved loans, and the 2019 population. Here's an example for [Alabama](https://smussenden.github.io/coursefiles/ppp_scraping_example/states/alabama.html). You'll need to loop over the individual state urls, scrape each individual page and combine the information on each page into a single dataframe to answer this question.  
-A7.
+A7.South Dakota is the state that has the most approved PPP loans per 100,000 population. 
 ```{r}
 url <- 'https://smussenden.github.io/coursefiles/ppp_scraping_example/index.html'
+approved_ppp_loans_per_state <- tibble()
 
-alabama <-url %>%
+state_urls <- url3 %>%
   read_html() %>%
-  html_table()
+  html_table() 
 
-alabama <- alabama[(1)]
+state_urls <- state_urls[[1]]
 
-
-state_url <- url %>%
-  read_html() %>%
-  html_table()
-
-print(52/nrow(state_url))
-
-
-PPP_loan_totals <- url %>%
-  read_html() %>%
-  html_table()%>%
-  state_page_link <- 'state_page_link' %>%
-  for (x in state_page_link) {
-  print(x) }
+for(row_number in 1:nrow(state_urls)){
+  each_row_df <- state_urls %>%
+  slice(row_number)
   
-url <- 'https://smussenden.github.io/coursefiles/ppp_scraping_example/index.html'
+  indv_url <- each_row_df$url 
+  
+  state_table <- indv_url %>%    
+    read_html() %>%
+    html_table() 
+  
+  state_table <- state_table[[1]]
+  
+  approved_ppp_loans_per_state <- approved_ppp_loans_per_state %>%
+    bind_rows(state_table)
+}
 
-xpath_employment_table <- paste0('//*[@id="',each_row_df$sector_xpath_id,'"]')
-
-PPP_loan_totals <- url %>%
-  read_html() %>%
-  html_elements(xpath_employment_table) %>%
-  html_table()
-
-print(PPP_loan_totals)
-    
-for(row_number in 1:nrow(naics_industry)) {
-
-    each_row_df <- naics_industry %>%
-      slice(row_number) }
+approved_ppp_loans_per_state %>%
+  mutate(ppp_loans_per_100000 = total_ppp_loans/population*100000) %>%
+  arrange(desc(ppp_loans_per_100000))
 
 ```
