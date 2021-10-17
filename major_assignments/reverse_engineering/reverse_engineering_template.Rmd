@@ -98,7 +98,7 @@ highrankallegations %>%
 
 * **Sentence text**: “Eighty-six of the roughly 420 officers in the department who currently hold a rank above captain — running precincts and other large commands and overseeing hundreds of officers — have tallied at least one misconduct allegation that was substantiated by the CCRB, meaning that investigators amassed enough evidence of offenses, ranging from bad language to pistol whippings, to say that they happened and broke patrol guidelines. The most common involved improper property entries and searches.”
 
-* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
+* **Analysis summary**: In this section of code, we began by looking into the allegations by rank, filtering by the ranks of "Captain", "Deputy Inspector","Inspector", Deputy Chief", Assistant Chief", "Bureau Chief", "Police Commissioner" and "Chiefs and other ranks". Finally, we filtered the data by substantiated allegations. This allowed us to reach the conclusion that eighty-six of around 420 officers in the department who hold a rank above captain have had at least one misconduct allegation that was substantiated by the CCRB. 
 
 ```{r}
 # Put code to reverse engineer sentence here
@@ -124,7 +124,7 @@ filter(clean_disposition == "Substantiated")
 * **Sentence text**: “Of at least 77 allegations made against him in 26 separate CCRB complaints, 29 were unsubstantiated; five were “unfounded,” meaning investigators concluded the incident never took place; and 27 were 'exonerated, meaning the conduct fell within patrol guidelines.”
 
 
-* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
+* **Analysis summary**: In order to uncover the data used for this sentence of the article, we created the oject 'cchrisallegations' and filtered by last name 'Mccormack' and first name 'Christophe'. We grouped the data for Christopher McCormack by 'unique_mos_id', 'first_name', 'last_name' and 'allegation' and this returned 26 separate allegations. After this, we further grouped the data by 'clean_disposition' and were able to organize the allegations made against McCormack by unsubstantiated allegations, unfounded allegations and exonerated allegations. 
 
 ```{r}
 cchrisallegations <- allegations %>% 
@@ -152,10 +152,9 @@ allegations %>%
 
 * **Sentence text**: “But many of the officers also said that it’s possible to be an effective cop without so many complaints. An overwhelming majority of the city’s 36,000 officers do not have a single substantiated complaint on their records; only 1 in 9 does.”
 
-* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
-
+* **Analysis summary**: For this sentence, we began by creating an entirely new data set that would return the total number of officers with at least one substantiated complaint. We created an object called 'officers_with_complaints' and filtered by 'substantiated' allegations and used distinct to return only the 'unique_mos_id', 'first_name', 'last_name' and 'rank_now' columns. After this, we divided the number of officers with at least one substantiated complaint by the total number of officers, in order to conclude that a majority of the city's 36,000 officers do not have a substantiated complaint on their record, only 1 in 9 does. 
 ```{r}
-#make new dataset that gives total number of officers with at least one substantiated complaints
+#make new data set that gives total number of officers with at least one substantiated complaint
 officers_with_complaints <- cleaned_allegations %>%
   filter(cleaned_board_disposition == "Substantiated") %>%
   distinct(unique_mos_id, first_name, last_name, rank_now)
@@ -171,7 +170,7 @@ officers_with_complaints %>%
 
 * **Sentence text**: The story focused on Christopher McCormack. Use data analysis to justify that decision. Why does he stand out as newsworthy, from all of the people they could have selected? Why, do you think, did the reporters single him out for an in-depth story. Write code to support your argument.
 
-* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
+* **Analysis summary**: In our last section, we created code to show why Christopher McCormack stands out as newsworthy. The reporters singled him out as newsworthy because, although he had similar allegations to many other officers, his accusations by Black and Latino men of invasive, humiliating searches were far more significant. Reporters wrote that he was accused of pulling own their pants in public, exposing their genitals and using inappropriate methods to search for drugs. In our code, we began by filtering the cleaned allegations by "rank_above_captain= "Yes" and grouping by 'unique_mos_id', 'first_name', 'last_name', 'rank_now', and 'mos_ethnicity'. This returned results that showed the depth of the claims made against McCormack. 
 
 ```{r}
 # Put code to reverse engineer sentence here
