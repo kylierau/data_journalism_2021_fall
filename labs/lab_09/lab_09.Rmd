@@ -107,7 +107,7 @@ state %>%
 
 
 
-**A2.** 
+**A2.** South Dakota
 
 **Q3.**  A scatterplot is a type of chart that helps us see relationships between two variables. One variable goes on the x axis, the other on the y axis.  For each row/observation in our data, a scatterplot puts a circle (or a "point") where the two variables intersect on a grid. 
 
@@ -132,9 +132,16 @@ To answer those questions, make a codeblock and do the following:
 
 WV <- read_rds("data/lab_09.rds")
 
+
+
 WV %>%
-   filter(amount < 25,000)
-  group_by(amount) %>%
+   filter(amount < 25,000)%>%
+  mutate(forgiveness_amount = case_when(is_no(forgiveness_amount)-0, 
+   TRUE = forgiveness_amount
+  ))
+  WV %>%
+  ggplot() + 
+  geom_point(desc(c=amount,y=forgiveness_amount))
  
 
     
