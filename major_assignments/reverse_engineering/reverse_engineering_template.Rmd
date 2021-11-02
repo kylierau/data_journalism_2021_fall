@@ -123,7 +123,6 @@ filter(clean_disposition == "Substantiated")
 
 * **Sentence text**: “Of at least 77 allegations made against him in 26 separate CCRB complaints, 29 were unsubstantiated; five were “unfounded,” meaning investigators concluded the incident never took place; and 27 were 'exonerated, meaning the conduct fell within patrol guidelines.”
 
-
 * **Analysis summary**: In order to uncover the data used for this sentence of the article, we created the oject 'cchrisallegations' and filtered by last name 'Mccormack' and first name 'Christophe'. We grouped the data for Christopher McCormack by 'unique_mos_id', 'first_name', 'last_name' and 'allegation' and this returned 26 separate allegations. After this, we further grouped the data by 'clean_disposition' and were able to organize the allegations made against McCormack by unsubstantiated allegations, unfounded allegations and exonerated allegations. 
 
 ```{r}
