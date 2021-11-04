@@ -106,10 +106,13 @@ inner_join(kabbage_counties, by=c("project_county_name" = "project_county_name",
   rename("total_loans" = "total.x")
 
 kabbage_all_counties_percentage <- kabbage_all_counties %>%
-  mutate(total_loans/kabbage_total*100) %>% 
+  mutate(total_loans/kabbage_total*100) %>%
   arrange(desc(kabbage_all_counties_percentage))
 
-  
+county_flips <- read_csv("data/county_fips.csv")
+
+
+
 
 ```
 
