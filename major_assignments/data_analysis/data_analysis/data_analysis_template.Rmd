@@ -1,6 +1,6 @@
 ---
 title: "Data Analysis Project"
-author: "michael purdie"
+author: "Kylie, Shreya, Michael"
 date: "11/14/21"
 output:
   html_document:
@@ -51,6 +51,8 @@ census_api_key("97677b7fa54c8bb69e6ed34e1b9841350e55ff82")
 
 ## Working with the data 
 
+Question 1: Is there a correlation between those fatally shot who were armed with a toy weapon and race?
+
 ``` {r}
 ## trying to make a map to generally understand where the shootings are
 ## getting some county data
@@ -70,3 +72,24 @@ ggplot() +
   geometry = geometry
 ```
 
+Question 2: We know that police disproportionately kill Black men. Are these killings happening in Black neighborhoods or elsewhere? Are police shootings disproportionately happening in low-income areas?
+
+``` {r}
+
+```
+
+Question 3: 
+``` {r}
+
+```
+
+Question 4: 
+
+``` {r}
+```
+
+Question 5: 
+
+``` {r}
+
+```
