@@ -379,7 +379,7 @@ Now we can join them.
 
 ```{r}
 md_beds_per_100k <- md_county_population %>%
-  left_join(md_beds_by_county,by=c("county"))
+  left_join(md_beds_by_county)
 
 md_beds_per_100k
 ```
