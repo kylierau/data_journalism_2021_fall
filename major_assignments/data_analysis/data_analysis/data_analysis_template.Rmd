@@ -51,9 +51,11 @@ census_api_key("97677b7fa54c8bb69e6ed34e1b9841350e55ff82")
 
 ## Working with the data 
 
-Question 1: Is there a correlation between those fatally shot who were armed with a toy weapon and race?
-
 ``` {r}
+police_shootings$MY <- paste(police_shootings$longitude, police_shootings$latitude)
+
+
+
 ## trying to make a map to generally understand where the shootings are
 ## getting some county data
 counties <- counties() 
@@ -72,13 +74,23 @@ ggplot() +
   geometry = geometry
 ```
 
-Question 2: We know that police disproportionately kill Black men. Are these killings happening in Black neighborhoods or elsewhere? Are police shootings disproportionately happening in low-income areas?
+Question 1: Do communities that are majority black see more fatal police shootings than communities that are majority white?
+
+```{r}
+black_communities <- police_shootings %>%
+ filter(race == "B")
+
+white_communities <- police_shootings %>%
+  mutate(race == "W")
+```
+
+Question 2: Do communities that are lower income see more fatal police shootings than communities that are higher income?
 
 ``` {r}
-
 ```
 
 Question 3: 
+
 ``` {r}
 
 ```
@@ -86,6 +98,7 @@ Question 3:
 Question 4: 
 
 ``` {r}
+
 ```
 
 Question 5: 
