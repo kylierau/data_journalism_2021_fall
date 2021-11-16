@@ -75,7 +75,7 @@ county_vaccinations_by_date <- county_vaccinations_by_date %>%
 
 ### Task 4: Count the number of rows for each county
 **Task** Run the following code and describe the dataframe it produces. Is there anything unusual there?
-**Answer**
+**Answer** There is a county that is titled N/A.
 
 Let's see if there's anything unusual in the data by counting the number of rows for each county:
 
@@ -89,7 +89,7 @@ View(county_totals)
 
 ### Task 5: Examine the NA records
 **Task** Run the following code and describe the tibble it produces. What do you think this data represents?
-**Answer**
+**Answer** This produces vacinnations by date for the N/A county. 
 
 There are totals for all of Maryland's jurisdictions, plus one for "Unknown" and one that's NA. All but the last one have roughly the same number of records. What's going on with the NA records?
 
@@ -126,8 +126,8 @@ Now is when we need to start asking ourselves -- what are the questions that are
 What if we just ranked them? Where does this date rank? For that, we'll create a new column called Rank using mutate and we'll use a function called `min_rank` to rank them. Let's start by looking at daily `fully_vaccinated` figures in Prince George's County:
 
 ### Task 8: Produce a dataframe for Prince George's County that ranks its days in terms of number of people fully vaccinated on each day
-**Task** Run the following code and describe the dataframe it produces. Is there a pattern for the most recent 7-10 days?
-**Answer**
+**Task** Run the following code and describe the data frame it produces. Is there a pattern for the most recent 7-10 days?
+**Answer** This data frame shows a row called county, all labeled Prince George's County with rank and the amount of fully vaccinated people. There is a column for date but it does not have anything in it. There is no pattern for the most recent 7-10 days because there is no dates coming up on the ranked column. 
 
 ```{r}
 ranked <- county_vaccinations_by_date %>%
@@ -161,7 +161,7 @@ More than numbers, we are going to want to see this data so we can spot potentia
 
 ### Task 9: Make a simple bar chart
 **Task** Run the following code and describe what the chart is showing. What is the trend in the data?
-**Answer**
+**Answer** This chart shows manyt small bars that get smaller over time. 
 
 ```{r fig.width=9}
 ggplot() +
@@ -222,7 +222,7 @@ Now we're going to use a function called paste to merge some text together. We'r
 
 ### Task 12: Produce a description for your bar chart based on the variables in Task 11
 **Task** Run the following code and put the value of `sub` in the answer.
-**Answer**
+**Answer** -74.25%
 
 ```{r}
 sub <- paste("The number of people in Prince George's County fully vaccinated on ", format(latest_date$vaccination_date, format="%B %d"), " ", direction, " by ", changetext, " percent compared to the week before", sep="")
@@ -231,7 +231,7 @@ sub
 
 ### Task 13: Produce a description for your bar chart based on the variables in Task 11
 **Task** Run the following code and put the value of `sub` in the answer.
-**Answer**
+**Answer** -74.25%
 
 Now we can add that to our labels.
 
@@ -282,7 +282,7 @@ Let's filter out Maryland first and create a line chart:
 
 ### Task 15: Filter on Maryland and create a line chart
 **Task** Run the following code and describe what the resulting chart shows
-**Answer**
+**Answer** The resulting trend shows slightly increasing, color coded lines by county. These represent cases increasing over time. 
 
 ```{r}
 maryland <- covid %>% filter(state == "Maryland")
@@ -294,7 +294,7 @@ The colors can be a little hard to make out, but when you have counties with a l
 
 ### Task 16: Switch the line chart to use a log scale
 **Task** Run the following code and describe what the resulting chart shows
-**Answer**
+**Answer** This chart shows more of a complex version of the same chart above. This shows the increase in cases with the bottom county increasing and then decreasing. 
 
 ```{r}
 ggplot() + geom_line(data=maryland, aes(x=date, y=cases, group=county, color=county)) + scale_y_continuous(trans="log10")
@@ -310,7 +310,7 @@ I'm adding one piece to the end to make joining this to a map easier and just re
 
 ### Task 17: Find the latest data for Maryland and join it to a shapefile of U.S. counties
 **Task** Run the following code. How many rows in the counties dataframe?
-**Answer**
+**Answer** 3233 rows in the counties data frame. 
 
 ```{r}
 current <- maryland %>% summarize(max(date))
@@ -323,7 +323,7 @@ Since we have every county in the United States in our counties map layer, we ca
 
 ### Task 18: Filter our data to just Maryland
 **Task** Run the following code. How many rows in the mdcounties dataframe?
-**Answer**
+**Answer** 24 rows in the mdcounties dataframe. 
 
 ```{r}
 mdcounties <- counties %>% filter(STATEFP == 24)
@@ -333,7 +333,7 @@ So now, we have a geographic dataframe that has both the county shapes and the n
 
 ### Task 19: Make a map
 **Task** Run the following code and describe what the map is showing.
-**Answer**
+**Answer** This map shows the amount of cases on a Maryland lap, separated by county. 
 
 ```{r}
 ggplot() +
