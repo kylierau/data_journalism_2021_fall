@@ -1,7 +1,7 @@
 ---
 title: "Data Analysis Project"
 author: "Kylie, Shreya, Michael"
-date: "11/14/21"
+date: "11/30/21"
 output:
   html_document:
     theme: cerulean
@@ -33,8 +33,12 @@ library(lubridate)
 library(sf)
 library(tigris)
 library(tidycensus)
+
 install.packages("usmap")
 library(usmap)
+
+install.packages("censusxy")
+library(censusxy)
 ```
 
 ## Load and Cleaning Data
@@ -43,66 +47,146 @@ In this section, describe the source of the data, write a basic data dictionary 
 
 ```{r}
 # Load required data
-police_shootings <- read_csv("data/data-police-shootings-master/fatal-police-shootings-data.csv")
-homicides <- read_csv("data/data-homicides-master/homicide-data.csv")
+police_shootings <-read_csv("data/data-police-shootings-master/fatal-police-shootings-data.csv")
 
 census_api_key("97677b7fa54c8bb69e6ed34e1b9841350e55ff82")
+
 ```
 
-## Working with the data 
+#working with the data
 
 ``` {r}
-police_shootings$MY <- paste(police_shootings$longitude, police_shootings$latitude)
-
-
-
-## trying to make a map to generally understand where the shootings are
-## getting some county data
 counties <- counties() 
-usa_counties <- counties 
-## adding a geometry columns to police shootings
-police_shootings_geom <- police_shootings %>%
-  mutate(geometry = c(latitude, longitude))
-## above did not work 
- 
+usa_counties <- counties %>%
+  filter (STATEFP < "57")
+
+police_shootings <- read_csv("data/data-police-shootings-master/fatal-police-shootings-data.csv") %>%
+    filter(!is.na(longitude)) 
+
+police_shootings_sf <- tibble()
+  for (row_number in 1:nrow(police_shootings)) {
+  row_df<- police_shootings %>%
+  slice(row_number)
+  longitude <- row_df$longitude
+  latitude <- row_df$latitude
+  census_results <- cxy_geography(longitude, latitude) %>%
+    if (!is.null(census_results)){
+      select(Census.Tracts.GEOID) %>%
+      clean_names()
+      row_df <- row_df %>%
+        bind_cols(census_results) 
+  
+  police_shootings_sf <- police_shootings_sf %>%
+      bind_rows(row_df) 
+     
+  print(paste0("finished ", row_number, " ", Sys.time()))
+    
+  if (row_number%%500 == 0) {
+       filepath <- paste0("data/geocoded_results_", row_number, ".rds")
+       write_rds(police_shootings_sf, filepath)
+       police_shootings_sf <- as_tibble()
+     
+      }
+    } else (
+      print(paste0("No geocode found ", row_number, " ", Sys.time()))
+    )
+  }
+
+write_rds(police_shootings_sf, "data/geocoded_results.rds")
+
+read_rds("data/geocoded_results_2500.rds")
+
+data1 <- read_rds("data/geocoded_results_500.rds")
+data2 <-read_rds("data/geocoded_results_1000.rds")
+data3 <-read_rds("data/geocoded_results_1500.rds")
+data4 <-read_rds("data/geocoded_results_2000.rds")
+data5 <-read_rds("data/geocoded_results_2500.rds")
+data6 <-read_rds("data/geocoded_results_3000.rds")
+data7 <-read_rds("data/geocoded_results_3500.rds")
+data8 <-read_rds("data/geocoded_results_4000.rds")
+data9 <-read_rds("data/geocoded_results_4500.rds")
+data10 <- read_rds("data/geocoded_results_5000.rds")
+data11 <- read_rds("data/geocoded_results_5500.rds")
+data12 <- read_rds("data/geocoded_results_6000.rds")
+data13 <- read_rds("data/geocoded_results_6410.rds")
+
+shootings_w_geoid <- bind_rows(data1, data2, data3, data4, data5, data6, data7, data8, data9, data10, data11, data12, data13, .id = NULL)
+
+unmatched <- anti_join(police_shootings, shootings_w_geoid, by=c("id"))
+
+census_data <- get_acs(geography = "tract",variables = c(population = "B01001_001", median.gross.rent = "B25064_001",median.household.income = "B19013_001", rent.burden = "B25071_001", white = "B03002_003", af.am = "B03002_004", hispanic = "B03002_012", am.ind = "B03002_005", asian = "B03002_006", nh.pi = "B03002_007", multiple = "B03002_009",other = "B03002_008"), state = c("AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"), year = 2019)
+
+census_data <- pivot_wider(census_data, names_from = variable, names_sep = ".", values_from = c(estimate, moe)) 
+
+census_data <- rename(census_data, census_tracts_geoid = GEOID)
+
+shootings_w_acs <- shootings_w_geoid %>%
+  left_join(census_data, by=c("census_tracts_geoid"))
+
+new_shootings_w_acs <- read_rds("data/new_shootings_w_acs.rds")
+
+black_neighborhood_shootings <- new_shootings_w_acs %>%
+  mutate(
+    pct_black = (estimate.af.am/estimate.population) * 100)  %>%
+    filter(pct_black > 50) %>%
+  select(name, age, date, race, city, state, NAME, pct_black) %>%
+  arrange(desc(pct_black))
+
+(682 / 6409) * 100
+## interesting --> 10.64129 percent of the total shootings were in majority black neighborhoods. 
+## how many of those were black people? 
+black_neighborhood_shootings %>%
+  filter(race == "B") %>%
+  summarize (
+    count = n() 
+  ) %>%
+  as_tibble()
+## 508 of those are black 
+(508 / 682) * 100 
+  = 74.4868 percent of the shootings in Black neighborhoods
+
+## racial breakdown of the shootings
+black_neighborhood_shootings %>%
+  filter(race == "B") %>%
+  summarize (
+    count = n() 
+  ) %>%
+  as_tibble()
+
+
+##white neighborhood breakdown of shootings by race
+
+##white people shot in majority white neighborhoods
+white_neighborhood_shootings_white <- new_shootings_w_acs %>%
+  filter(race == "W", estimate.white > estimate.af.am + estimate.am.ind + estimate.asian + estimate.nh.pi + estimate.other)
+
+##Black people shot in majority white neighborhoods
+white_neighborhood_shootings_black <- new_shootings_w_acs %>%
+  filter(race == "B", estimate.white > estimate.af.am + estimate.am.ind + estimate.asian + estimate.nh.pi + estimate.other)
+
+
+## total people shot in majority white neighborhoods
+majority_white_neighborhood_shootings <- new_shootings_w_acs %>%
+  filter(estimate.white > estimate.af.am + estimate.am.ind + estimate.asian + estimate.nh.pi + estimate.other)
+
+2573/4856 = 0.52986 
+    = 52.986% of people shot in majority white neighborhoods are white. 
+
+709/4856 = 0.1460049
+    = 14.6% of people shot in majority white neighborhoods are black. 
+
+
+##analysis based on low and high income neighborhoods
+
+
+  
+cxy_geography(longitude, latitude)
 ## mapping all the counties
 ## this is not really working rn but I am trying lol
 ggplot() + 
+  geom_sf(police_shootings_geom)
+  geom_point(data=police_shootings, aes(x=longitude, y=latitude)) +
   geom_sf(data=usa_counties) + 
-  geom_sf(data=police_shootings) +
   theme_minimal() +
   geometry = geometry
-```
-
-Question 1: Do communities that are majority black see more fatal police shootings than communities that are majority white?
-
-```{r}
-black_communities <- police_shootings %>%
- filter(race == "B")
-
-white_communities <- police_shootings %>%
-  mutate(race == "W")
-```
-
-Question 2: Do communities that are lower income see more fatal police shootings than communities that are higher income?
-
-``` {r}
-```
-
-Question 3: 
-
-``` {r}
-
-```
-
-Question 4: 
-
-``` {r}
-
-```
-
-Question 5: 
-
-``` {r}
-
 ```
