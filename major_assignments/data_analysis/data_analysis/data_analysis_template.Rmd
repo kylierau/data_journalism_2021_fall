@@ -56,45 +56,7 @@ census_api_key("97677b7fa54c8bb69e6ed34e1b9841350e55ff82")
 #working with the data
 
 ``` {r}
-counties <- counties() 
-usa_counties <- counties %>%
-  filter (STATEFP < "57")
-
-police_shootings <- read_csv("data/data-police-shootings-master/fatal-police-shootings-data.csv") %>%
-    filter(!is.na(longitude)) 
-
-police_shootings_sf <- tibble()
-  for (row_number in 1:nrow(police_shootings)) {
-  row_df<- police_shootings %>%
-  slice(row_number)
-  longitude <- row_df$longitude
-  latitude <- row_df$latitude
-  census_results <- cxy_geography(longitude, latitude) %>%
-    if (!is.null(census_results)){
-      select(Census.Tracts.GEOID) %>%
-      clean_names()
-      row_df <- row_df %>%
-        bind_cols(census_results) 
-  
-  police_shootings_sf <- police_shootings_sf %>%
-      bind_rows(row_df) 
-     
-  print(paste0("finished ", row_number, " ", Sys.time()))
-    
-  if (row_number%%500 == 0) {
-       filepath <- paste0("data/geocoded_results_", row_number, ".rds")
-       write_rds(police_shootings_sf, filepath)
-       police_shootings_sf <- as_tibble()
-     
-      }
-    } else (
-      print(paste0("No geocode found ", row_number, " ", Sys.time()))
-    )
-  }
-
-write_rds(police_shootings_sf, "data/geocoded_results.rds")
-
-read_rds("data/geocoded_results_2500.rds")
+police_shootings <- read_csv("data/data-police-shootings-master/fatal-police-shootings-data.csv")
 
 data1 <- read_rds("data/geocoded_results_500.rds")
 data2 <-read_rds("data/geocoded_results_1000.rds")
@@ -110,21 +72,77 @@ data11 <- read_rds("data/geocoded_results_5500.rds")
 data12 <- read_rds("data/geocoded_results_6000.rds")
 data13 <- read_rds("data/geocoded_results_6410.rds")
 
-shootings_w_geoid <- bind_rows(data1, data2, data3, data4, data5, data6, data7, data8, data9, data10, data11, data12, data13, .id = NULL)
-
-unmatched <- anti_join(police_shootings, shootings_w_geoid, by=c("id"))
+shootings_w_geoid <- rbind(data1,data2,data3,data4,data5,data6,data7,data8,data9,data10,data11,data12,data13)
 
 census_data <- get_acs(geography = "tract",variables = c(population = "B01001_001", median.gross.rent = "B25064_001",median.household.income = "B19013_001", rent.burden = "B25071_001", white = "B03002_003", af.am = "B03002_004", hispanic = "B03002_012", am.ind = "B03002_005", asian = "B03002_006", nh.pi = "B03002_007", multiple = "B03002_009",other = "B03002_008"), state = c("AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"), year = 2019)
+
+#pivot
 
 census_data <- pivot_wider(census_data, names_from = variable, names_sep = ".", values_from = c(estimate, moe)) 
 
 census_data <- rename(census_data, census_tracts_geoid = GEOID)
 
+
+unmatched <- anti_join(police_shootings, shootings_w_geoid, by=c("id"))
+
+#join
 shootings_w_acs <- shootings_w_geoid %>%
   left_join(census_data, by=c("census_tracts_geoid"))
 
-new_shootings_w_acs <- read_rds("data/new_shootings_w_acs.rds")
+new_shootings_w_acs <- read_rds("data/new_shootings_w_acs copy.rds")
 
+new_shootings_w_acs <- new_shootings_w_acs %>%
+  mutate(tract_majority_black = case_when((estimate.af.am/estimate.population > .5) ~ "y",
+                                          (estimate.af.am/estimate.population <= .5) ~ "n")) %>%
+  mutate(tract_majority_white = case_when((estimate.white/estimate.population > .5) ~ "y",
+                                          (estimate.white/estimate.population <= .5) ~ "n")) %>%
+  mutate(tract_majority_poor = case_when((estimate.poverty_level/estimate.population > .25) ~ "y",
+                                         (estimate.poverty_level/estimate.population <= .25) ~ "n"))
+
+##below poverty and Black shootings
+
+below_pov_black <- new_shootings_w_acs %>%
+  filter(
+    tract_majority_black == "y",
+    tract_majority_poor == "y"
+  )
+(395/72877) * 100
+
+
+##.5420091% of shootings happen in tracts where a majority of the population is below the poverty line and a majority of the population is black.
+
+tracts_below_black <- grouped_shootings %>%
+  filter(
+  tract_low_income == "y", 
+  tract_majority_black == "y"
+  )
+(1447/72877) * 100
+
+##1.985537% of all U.S. census tracts have a majority of the population that is below the poverty line AND a majority of the population that is black. 
+
+
+
+##below poverty and white shootings
+
+below_pov_white <- new_shootings_w_acs %>%
+  filter(
+    tract_majority_white == "y",
+    tract_majority_poor == "y"
+  )
+(11/72877) * 100
+  = 0.01509393% 
+
+##0.01509393% of shootings happen in tracts where a majority of the population is white and a majority of the population is below the poverty line. 
+
+
+grouped_shootings <- read_rds("data/grouped_shootings_w_acs.rds")
+
+
+
+
+
+
+#deeper analysis
 black_neighborhood_shootings <- new_shootings_w_acs %>%
   mutate(
     pct_black = (estimate.af.am/estimate.population) * 100)  %>%
@@ -164,7 +182,6 @@ white_neighborhood_shootings_white <- new_shootings_w_acs %>%
 white_neighborhood_shootings_black <- new_shootings_w_acs %>%
   filter(race == "B", estimate.white > estimate.af.am + estimate.am.ind + estimate.asian + estimate.nh.pi + estimate.other)
 
-
 ## total people shot in majority white neighborhoods
 majority_white_neighborhood_shootings <- new_shootings_w_acs %>%
   filter(estimate.white > estimate.af.am + estimate.am.ind + estimate.asian + estimate.nh.pi + estimate.other)
@@ -175,18 +192,292 @@ majority_white_neighborhood_shootings <- new_shootings_w_acs %>%
 709/4856 = 0.1460049
     = 14.6% of people shot in majority white neighborhoods are black. 
 
+## black people shot in majority black neighborhoods
+black_neighborhood_shootings_black <- new_shootings_w_acs %>%
+filter(race == "B", estimate.af.am > estimate.white + estimate.am.ind + estimate.asian + estimate.nh.pi + estimate.other)
+black_neighborhood_shootings_black
+  ##663 people
 
-##analysis based on low and high income neighborhoods
+## white people shot in majority black neighborhoods
+black_neighborhood_shootings_white <- new_shootings_w_acs %>%
+filter(race == "W", estimate.af.am > estimate.white + estimate.am.ind + estimate.asian + estimate.nh.pi + estimate.other)
+black_neighborhood_shootings_white
+  ##144 people
+
+## total people shot in majority black neighborhoods
+majority_black_neighborhood_shootings <- new_shootings_w_acs %>%
+filter(estimate.af.am > estimate.white + estimate.am.ind + estimate.asian + estimate.nh.pi + estimate.other)
+majority_black_neighborhood_shootings
+  ##1029 people
+144/1029 = 0.1399417*100 
+    = 13.4% of people shot in majority black neighborhoods are white. 
+663/1029 = 0.6443149*100
+    = 64.4% of people shot in majority black neighborhoods are black. 
+```
+
+
+
+``` {r}
+##back to square 1 :P 
+
+shooting_threat_level <- new_shootings_w_acs %>%
+  filter(threat_level == "attack")
+
+(4119/6409) *100
+
+##64.269% of shootings happened when the threat level was attack. 
+
+
+fleeing <- new_shootings_w_acs %>%
+  filter(flee == "Not fleeing")
+
+(3829/6409) *100
+
+##59.74411 people were not fleeing when they were shot. 
+
+car_fleeing <- new_shootings_w_acs %>%
+  filter(flee == "Car")
+(1012/6409) *100
+
+##15.79029 people were fleeing by car.
+
+
+```
+
+
+
+### Income Analysis
+
+
+``` {r}
+## income breakdown !! 
+    ## Pew Research Center defines low-income households as those earning below $48,500 
+    ## Pew Research Center defines high-income households as those earning above $145,500
+    
+## general low-income breakdown first:
+low_income_shootings <- new_shootings_w_acs %>%
+  filter(estimate.median.household.income < 48500, 
+         race == "B")
+low_income_shootings %>% 
+   summarize(
+   count = n() 
+  ) 
+  ## 2924 shootings out of 6409 were in low-income neighborhoods 
+(2924/6409) * 100
+  = 45.6% of shootings were in low-income neighborhoods.
+(865/6409) * 100
+  = 13.49665 % of shootings happen in tracts where the majority of the population is below the poverty line and a majority of the population is black. 
+
+## where are the specific places:
+low_income_shootings %>%
+  group_by(NAME) %>%
+   summarize(
+   count = n() 
+  ) %>%
+  arrange(desc(count))
+  ##none of these seem to be significant
+
+## white people shot in majority low-income neighborhoods
+low_income_neighborhood_shootings_white <- new_shootings_w_acs %>%
+filter(race == "W", estimate.median.household.income < 48500)
+low_income_neighborhood_shootings_white
+  ##1108 people
+
+## black people shot in majority low-income neighborhoods
+low_income_neighborhood_shootings_black <- new_shootings_w_acs %>%
+filter(race == "B", estimate.median.household.income < 48500)
+low_income_neighborhood_shootings_black
+  ##865 people
+1108/2924 = 0.378933*100 
+    = 37.9% of people shot in majority low-income neighborhoods are white. 
+865/2924 = 0.2958276*100
+    = 29.6% of people shot in majority low-income neighborhoods are black. 
+## general high-income breakdown
+high_income_shootings <- new_shootings_w_acs %>%
+  filter(estimate.median.household.income > 145500)
+high_income_shootings %>% 
+   summarize(
+   count = n() 
+  ) 
+  ## 59 shootings out of 6409 were in high-income neighborhoods 
+(59/6409) * 100
+  = 0.92% of shootings were in high-income neighborhoods.
+## where are the specific places:
+high_income_shootings %>%
+  group_by(NAME) %>%
+   summarize(
+   count = n() 
+  ) %>%
+  arrange(desc(count))
+  ##none of these seem to be significant, except maybe top 3 in Texas?
+## white people shot in majority high-income neighborhoods
+high_income_neighborhood_shootings_white <- new_shootings_w_acs %>%
+filter(race == "W", estimate.median.household.income > 145500)
+high_income_neighborhood_shootings_white
+  ##33 people
+## black people shot in majority high-income neighborhoods
+high_income_neighborhood_shootings_black <- new_shootings_w_acs %>%
+filter(race == "B", estimate.median.household.income > 145500)
+high_income_neighborhood_shootings_black
+  ##13 people
+33/59 = 0.378933*100 
+    = 55.9% of people shot in majority high-income neighborhoods are white. 
+13/59 = 0.2958276*100
+    = 22.0% of people shot in majority high-income neighborhoods are black. 
+
+
+
+
+
+
+
+### 1. What percentage of shootings happen in low_income tracts?
+new_shootings_w_acs %>% 
+  filter(tract_low_income == "y") %>%
+   summarize(
+    count = n()
+  )
+## 3465 shootings in low-income tracts, 6409 shootings in total
+(3465 / 6409) * 100 
+## 54.064 percent of shootings happen in low-income tracts
+
+### 2. What percentage of all U.S. census tracts are low_income
+grouped_shootings_w_acs %>% 
+  group_by(tract_low_income) %>%
+  filter(!is.na(tract_low_income)) %>%
+  summarize(
+    count = n()
+  )
+(49283	/ (49283 + 22749)) * 100
+## 68.41 percent of tracts are low-income
+
+### 3. How does the answer to number 1 compare to the answer in number 2?
+## this might not be super significant since most of the U.S. is low-income tracts--could be indicative of our benchmark
+
+# All low_income and majority black tracts
+
+### 1. What percentage of shootings happen in tracts that are low_income AND majority black?
+new_shootings_w_acs %>%
+  filter(tract_low_income == "y" & tract_majority_black == "y") %>%
+  summarize(count = n())
+(101 / 6409) * 100
+## 1.57 percent happen in tracts that are low-income and majority black
+
+### 2. What percentage of all U.S. census tracts are low_income and majority black?
+grouped_shootings_w_acs %>%
+  filter(tract_low_income == "y" & tract_majority_black == "y") %>%
+  summarize(count = n())
+(1447 / 73056) * 100
+## 1.98 percent of census tracts are low-income and majority black
+
+### 3. How does the answer to number 1 compare to the answer in number 2?
+## about the same. 
+
+# All low_income and majority white tracts  
+
+#1. What percentage of shootings happen in tracts that are low_income AND majority white?
+new_shootings_w_acs %>%
+  filter(tract_low_income == "y" & tract_majority_white == "y") %>%
+  summarize(count = n())
+  #2391 
+2391/6409 = .3730691*100
+    = 27.3% of shootings happen in tracts that are low_income AND majority white.
+
+#2. What percentage of all U.S. census tracts are low_income and majority white?
+grouped_shootings_w_acs %>%
+  filter(tract_low_income == "y" & tract_majority_white == "y") %>%
+  summarize(count = n())
+  #37842 
+37842/73056 = .5179862*100
+    = 51.8% of all U.S. census tracts are low income and majority white.
+
+#3. How does the answer to number 1 compare to the answer in number 2?
+  
+
+
+
+
+
+# Using poverty
+## All majority poor tracts
+#1. What percentage of shootings happen in tracts where the majority of the population is below the poverty line? 
+new_shootings_w_acs %>%
+  filter(tract_majority_poor == "y") %>%
+  summarize(count = n())
+  #90 
+90/6409 = .01404275*100
+    = 1.4% of shootings happen in tracts where the majority of people are below the poverty line.
+
+#2. What percentage of all U.S. census tracts have a majority of the population below the poverty line?
+
+grouped_shootings_w_acs %>%
+  filter(tract_majority_poor == "y") %>%
+  summarize(count = n())
+  #745 
+745/73056 = .01019766*100
+    = 1.0% of all U.S. census tracts are low income and majority white.
+
+
+
+
+
+
+
+
+## All majority poor and majority black tracts
+1. What percentage of shootings happen in tracts where a majority of the population is below the poverty line AND a majority of the population is black?
+
+below_pov_black <- new_shootings_w_acs %>%
+  filter(
+    tract_majority_black == "y",
+    tract_majority_poor == "y"
+  )
+(395/72877) * 100
+
+##54.20091% of shootings happen in tracts where a majority of the population is below the poverty line and a majority of the population is black.
+
+
+2. What percentage of all U.S. census tracts have a majority of the population that is below the poverty line AND a majority of the population that is black?
+
+tracts_below_black <- grouped_shootings %>%
+  filter(
+  tract_low_income == "y", 
+  tract_majority_black == "y"
+  )
+(1447/72877) * 100
+
+1.985537% of all U.S. census tracts have a majority of the population that is below the poverty line AND a majority of the population that is black. 
+
+
+3. How does the answer to number 1 compare to the answer in number 2?
+
+## All majority poor and majority white tracts  
+1. What percentage of shootings happen in tracts where a majority of the population is below the poverty line AND a majority of the population is white?
+
+below_pov_white <- new_shootings_w_acs %>%
+  filter(
+    tract_majority_white == "y",
+    tract_majority_poor == "y"
+  )
+(11/72877) * 100
+  = 0.01509393% 
+
+0.01509393% of shootings happen in tracts where a majority of the population is white and a majority of the population is below the poverty line. 
+
+
+2. What percentage of all U.S. census tracts have a majority of the population that is below the poverty line AND a majority of the population that is white?
+  
+3. How does the answer to number 1 compare to the answer in number 2?  
+ 
 
 
   
-cxy_geography(longitude, latitude)
-## mapping all the counties
-## this is not really working rn but I am trying lol
-ggplot() + 
-  geom_sf(police_shootings_geom)
-  geom_point(data=police_shootings, aes(x=longitude, y=latitude)) +
-  geom_sf(data=usa_counties) + 
-  theme_minimal() +
-  geometry = geometry
+ 
+  
+  
+  
+# State breakdown
+# Do all of the queries above, but instead of asking the question nationally, ask it for each state (write one query to do it for all states, don't write a spearate query for each state)
+
+
 ```
