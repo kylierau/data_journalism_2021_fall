@@ -230,16 +230,23 @@ shooting_threat_level <- new_shootings_w_acs %>%
 
 fleeing <- new_shootings_w_acs %>%
   filter(flee == "Not fleeing")
-
-(3829/6409) *100
+  (3829/6409) *100
 
 ##59.74411 people were not fleeing when they were shot. 
 
 car_fleeing <- new_shootings_w_acs %>%
   filter(flee == "Car")
-(1012/6409) *100
+  (1012/6409) *100
 
 ##15.79029 people were fleeing by car.
+
+
+## are a higher percentage of people killed in black neighborhoods fleeing compared to white neighborhoods
+
+black_neighborhoods_fleeing <- new_shootings_w_acs %>%
+  filter(tract_majority_black == "y", flee == "Car")
+
+
 
 
 ```
@@ -469,6 +476,10 @@ below_pov_white <- new_shootings_w_acs %>%
   
 3. How does the answer to number 1 compare to the answer in number 2?  
  
+
+  
+  
+  
 
 
   

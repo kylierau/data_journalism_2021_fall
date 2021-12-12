@@ -1,0 +1,312 @@
+---
+title: "Data Analysis Project: final"
+names: Shreya Vuttaluru, Kylie Rau, Michael Purdie
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+#essential libraries
+library(tidyverse)
+library(janitor)
+library(lubridate)
+
+#additional libraries 
+library(sf)
+library(tigris)
+library(tidycensus)
+install.packages("usmap")
+library(usmap)
+install.packages("censusxy")
+library(censusxy)
+```
+
+
+LOADING DATA: Here, we're using the Washington Post Police Shootings database, and will join it to census data. 
+```{r}
+## Load required data
+police_shootings <- read_csv("data/data-police-shootings-master/fatal-police-shootings-data.csv")
+
+#census api key
+census_api_key("97677b7fa54c8bb69e6ed34e1b9841350e55ff82")
+
+## acs variables
+variables <- load_variables("acs5", year=2019)
+```
+
+CLEANING DATA: We created a for loop to reverse geocode the shootings based on latitude and longitude. The for loop is in the attached file called batch_job.r, Below are the new databases. One is grouped by census tract, and tells us whether or not there was a shooting in a census tract. The other tells us each individual shooting. 
+``` {r}
+### loading the files from batch_job.r 
+data1 <- read_rds("data/new_geocoded_results_500.rds")
+data2 <- read_rds("data/new_geocoded_results_1000.rds")
+data3 <- read_rds("data/new_geocoded_results_1500.rds")
+data4 <- read_rds("data/new_geocoded_results_2000.rds")
+data5 <- read_rds("data/new_geocoded_results_2500.rds")
+data6 <- read_rds("data/new_geocoded_results_3000.rds")
+data7 <- read_rds("data/new_geocoded_results_3500.rds")
+data8 <- read_rds("data/new_geocoded_results_4000.rds")
+data9 <- read_rds("data/new_geocoded_results_4500.rds")
+data10 <- read_rds("data/new_geocoded_results_5000.rds")
+data11 <- read_rds("data/new_geocoded_results_5500.rds")
+data12 <- read_rds("data/new_geocoded_results_6000.rds")
+data13 <- read_rds("data/new_geocoded_results_6410.rds")
+## binding rows (making a full dataset)
+shootings_w_geoid <- bind_rows(data1, data2, data3, data4, data5, data6, data7, data8, data9, data10, data11, data12, data13, .id = NULL)
+### grouping the shootings by tract:
+grouped_shootings_w_geoid <- shootings_w_geoid %>%
+  group_by(census_tracts_geoid) %>%
+  summarize(
+    count = n()
+  ) %>%
+  arrange(desc(count))
+## antijoining to figure out unmatched rows
+unmatched <- anti_join(police_shootings, shootings_w_geoid, by=c("id"))
+## only one match which is Gary Brown 
+### joining census data
+state_list <- fips_codes %>%
+  distinct(state) %>%
+  head(51) %>%
+  as_vector()
+fips_table <- fips_codes %>%
+  distinct(state,state_code)
+census_data <- get_acs(geography = "tract",
+                       variables = c(population = "B01001_001", 
+                                     median.gross.rent = "B25064_001",
+                                     median.household.income = "B19013_001",
+                                     rent.burden = "B25071_001",
+                                     white = "B03002_003",
+                                     af.am = "B03002_004",
+                                     hispanic = "B03002_012",
+                                     am.ind = "B03002_005",
+                                     asian = "B03002_006",
+                                     nh.pi = "B03002_007",
+                                     multiple = "B03002_009",
+                                     poverty_level ="B06012_002",
+                                     other = "B03002_008"),
+                       state = state_list, 
+                       year = 2019)
+#PIVOT
+census_data <- pivot_wider(census_data, names_from = variable, names_sep = ".", values_from = c(estimate, moe)) 
+#rename column
+census_data <- rename(census_data, census_tracts_geoid = GEOID)
+census_data_with_state <- census_data %>%
+  mutate(state_code = str_sub(census_tracts_geoid, start=1L, end=2L)) %>%
+  left_join(fips_table)
+#join for grouped dataset
+grouped_shootings_w_acs <- census_data_with_state %>%
+  left_join(grouped_shootings_w_geoid, by=c("census_tracts_geoid")) %>%
+  mutate(
+    shooting_y_n = 
+      if_else(
+      (is.na(count)), "n", "y"
+    )
+  ) %>%
+  arrange(desc(count))
+### joining demographic columns
+#adding columns
+  ## we defined a majority poverty tract as one above 25 percent poverty rate. 
+##grouped dataset by census tract
+grouped_shootings_w_acs <- grouped_shootings_w_acs %>%
+  mutate(tract_majority_black = case_when((estimate.af.am/estimate.population > .5) ~ "y",
+                                          (estimate.af.am/estimate.population <= .5) ~ "n")) %>%
+  mutate(tract_majority_white = case_when((estimate.white/estimate.population > .5) ~ "y",
+                                          (estimate.white/estimate.population <= .5) ~ "n")) %>%
+  mutate(tract_majority_poor = case_when((estimate.poverty_level/estimate.population > .25) ~ "y",
+                                         (estimate.poverty_level/estimate.population <= .25) ~ "n")) %>%
+  mutate(tract_low_income = case_when((estimate.median.household.income > 48500) ~ "y",
+                                         (estimate.median.household.income <= 48500) ~ "n"))
+##individual shooting dataset
+new_shootings_w_acs <- shootings_w_geoid %>%
+  left_join(census_data_with_state, by=c("census_tracts_geoid")) 
+## adding y/n columns
+new_shootings_w_acs <- new_shootings_w_acs %>%
+  mutate(tract_majority_black = case_when((estimate.af.am/estimate.population > .5) ~ "y",
+                                          (estimate.af.am/estimate.population <= .5) ~ "n")) %>%
+  mutate(tract_majority_white = case_when((estimate.white/estimate.population > .5) ~ "y",
+                                          (estimate.white/estimate.population <= .5) ~ "n")) %>%
+  mutate(tract_majority_poor = case_when((estimate.poverty_level/estimate.population > .25) ~ "y",
+                                         (estimate.poverty_level/estimate.population <= .25) ~ "n")) %>%
+  mutate(tract_low_income = case_when((estimate.median.household.income > 48500) ~ "y",
+                                         (estimate.median.household.income <= 48500) ~ "n"))
+new_shootings_w_acs <- read_rds("data/new_shootings_w_acs.rds")
+```
+
+
+ANALYSIS: Looking at a state-level analysis of the census tracts in which police shootings occur. 
+``` {r}
+### let's look at state level variations in shootings
+### Q: what is the percent of shootings that occurs by state in low-income census tracts? 
+state_by_low_income <- grouped_shootings_w_acs %>%
+  filter(shooting_y_n == "y") %>%
+  filter(!is.na(tract_low_income)) %>%
+  group_by(state,tract_low_income) %>%
+  summarise(
+    count=n()
+  ) %>%
+  mutate(total_shootings = sum(count)) %>%
+  mutate(pct_shootings = count/total_shootings) %>%
+  ungroup() %>%
+  select(state,tract_low_income,pct_shootings) %>%
+  pivot_wider(names_from=tract_low_income,values_from=pct_shootings) %>%
+  arrange(desc(y))
+### A: in most states, the majority of shootings are in "low-income" neighborhoods as described by pew.
+### Q: what is the percent of shootings that occurs by state in high-poverty census tracts? 
+state_by_majority_poor <- grouped_shootings_w_acs %>%
+  filter(shooting_y_n == "y") %>%
+  filter(!is.na(tract_majority_poor)) %>%
+  group_by(state,tract_majority_poor) %>%
+  summarise(
+    count=n()
+  ) %>%
+  mutate(total_shootings = sum(count)) %>%
+  mutate(pct_shootings = count/total_shootings) %>%
+  ungroup() %>%
+  select(state,tract_majority_poor,pct_shootings) %>%
+  pivot_wider(names_from=tract_majority_poor,values_from=pct_shootings) %>%
+  arrange(desc(y))
+### interesting --> the states don't really match up when looking at poverty level where 25 percent or greater of the state is in poverty.
+    ## and, all of the shootings happen more so in non-poverty tracts
+### what about majority-black tracts? 
+state_by_majority_black <- grouped_shootings_w_acs %>%
+  filter(shooting_y_n == "y") %>%
+  filter(!is.na(tract_majority_black)) %>%
+  group_by(state,tract_majority_black) %>%
+  summarise(
+    count=n()
+  ) %>%
+  mutate(total_shootings = sum(count)) %>%
+  mutate(pct_shootings = count/total_shootings) %>%
+  ungroup() %>%
+  select(state,tract_majority_black,pct_shootings) %>%
+  pivot_wider(names_from=tract_majority_black,values_from=pct_shootings) %>%
+  arrange(desc(y))
+## DC stands out here, as well as MD, LA, MS, and IL. However, this does make sense from a demographic perspective, since these states have a pretty significant black population.  
+### What if we looked at low-income and black neighborhoods?
+state_by_low_income_black <- grouped_shootings_w_acs %>%
+  filter(shooting_y_n == "y") %>%
+  filter(!is.na(tract_low_income)) %>%
+  group_by(state, tract_low_income, tract_majority_black) %>%
+  summarise(
+    count=n()
+  ) %>%
+  mutate(total_shootings = sum(count)) %>%
+  mutate(pct_shootings = count/total_shootings) %>%
+  ungroup() %>%
+  filter(tract_majority_black == "y" & tract_low_income == "y") %>%
+  select(state, tract_majority_black, tract_low_income, pct_shootings)  %>%
+  arrange(desc(pct_shootings))
+## DC, MD, NY, and MS standing out here
+## ### What if we looked at high-poverty and black neighborhoods?
+state_by_poverty_black <- grouped_shootings_w_acs %>%
+  filter(shooting_y_n == "y") %>%
+  filter(!is.na(tract_majority_poor)) %>%
+  group_by(state, tract_majority_poor, tract_majority_black) %>%
+  summarise(
+    count=n()
+  ) %>%
+  mutate(total_shootings = sum(count)) %>%
+  mutate(pct_shootings = count/total_shootings) %>%
+  ungroup() %>%
+  filter(tract_majority_black == "y" & tract_majority_poor == "y") %>%
+  select(state, tract_majority_black, tract_majority_poor, pct_shootings)  %>%
+  arrange(desc(pct_shootings))
+## DC, MD, and IL topping the list again
+### GENERAL TAKEAWAY: seems as though in some states, low-income/high-povrty and black neighborhoods
+### FURTHER ANALYSIS: let's compare percentages of the majority-poor/black populations of all tracts within each state with the percentages of tracts with shootings. 
+### this dataframe shows us whether or not a tract has a shooting, is maj-black and high-poverty, and the number of tracts that are in each category. 
+state_by_poverty_black_shooting <- grouped_shootings_w_acs %>%
+  #filter(shooting_y_n == "y") %>%
+  filter(!is.na(tract_majority_poor)) %>%
+  group_by(state, shooting_y_n, tract_majority_poor, tract_majority_black) %>%
+  summarise(
+    count=n()
+  ) 
+### this dataframe tells us about the demographics of tracts with shootings that are majority black and poor (ie, filters for those tracts only, and tells us the percent of shootings that occurred in tracts that are majority black and poor.)
+pct_tracts_with_shootings_state <- state_by_poverty_black_shooting %>%
+  filter(shooting_y_n == "y") %>%
+  mutate(majority_poor_black = case_when(
+    tract_majority_black == "y" &
+    tract_majority_poor == "y" ~ "y", 
+    TRUE ~ "n"
+  )) %>%
+  ungroup() %>%
+  select(state, majority_poor_black, count) %>%
+  group_by(state, majority_poor_black) %>%
+  summarize(
+    count = sum(count)
+  ) %>%
+pivot_wider(names_from="majority_poor_black", values_from="count") %>%
+  mutate(pct_majority_poor_black = y / (n + y)) %>%
+  arrange(desc(pct_majority_poor_black)) %>%
+  rename(
+    n_shootings_tracts = n,
+    y_shootings_tracts = y,
+    pct_shootings_maj_black_poor = pct_majority_poor_black
+  )
+  
+### this dataframe tells us about the demographics of all tracts within a that are majority black and poor--not just ones with shootings!.
+pct_all_tracts_state <- state_by_poverty_black_shooting %>%
+  mutate(majority_poor_black = case_when(
+    tract_majority_black == "y" &
+    tract_majority_poor == "y" ~ "y", 
+    TRUE ~ "n"
+  )) %>%
+  ungroup() %>%
+  select(state, majority_poor_black, count) %>%
+  group_by(state, majority_poor_black) %>%
+  summarize(
+    count = sum(count)
+  ) %>%
+pivot_wider(names_from="majority_poor_black", values_from="count") %>%
+  mutate(pct_majority_poor_black = y / (n + y)) %>%
+  arrange(desc(pct_majority_poor_black)) %>%
+  rename(n_all_tracts = n,
+         y_all_tracts = y,
+         pct_all_maj_poor_black = pct_majority_poor_black)
+### this is a joined dataframe so we can compare the percent of majority black/poor tracts WITH shootings to the percent of black/poor tracts overall within a state.
+join <- pct_all_tracts_state %>%
+  left_join(pct_tracts_with_shootings_state) %>%
+  mutate(difference_in_shootings = pct_all_maj_poor_black - pct_shootings_maj_black_poor) %>%
+  arrange(difference_in_shootings) %>%
+  filter(!is.na(y_all_tracts))
+## from this, we can see that there's a pretty stark jump from overall percent of black and poor census tracts to the percent of black and poor tracts with shootings in them, especially in states like IL, DC, MO, and NJ. This could potentially explained by the prevalence of cities like Chicago, Newark, Camden, and St. Louis with a high black population. 
+
+
+## further digging in each state. 
+
+### IL -->  ## in what tracts are the most shootings happening?
+  ## what's the demographic breakdown of those tracts?
+  ## anything interesting about police departments in that area (this is a google question)
+
+
+### MO --> in what tracts are the most shootings happening?
+  ## what's the demographic breakdown of those tracts?
+  ## anything interesting about police departments in that area (this is a google question)
+### NJ --> in what tracts are the most shootings happening? 
+  ## what's the demographic breakdown of those tracts?
+  ## anything interesting about police departments in that area (this is a google question)
+### Here's a per-capita analysis. 
+
+
+
+### DC --> in what tracts are the most shootings happening?
+
+
+dc_pct_tracts_with_shootings_state <- pct_tracts_with_shootings_state %>%
+  filter(state == "DC") 
+
+dc_pct_all_tracts_state <- pct_all_tracts_state %>%
+  filter(state == "DC")
+
+  ## what's the demographic breakdown of those tracts?
+  ## anything interesting about police departments in that area (this is a google question)
+```
