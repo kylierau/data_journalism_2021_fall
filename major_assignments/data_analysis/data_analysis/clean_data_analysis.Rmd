@@ -309,4 +309,21 @@ dc_pct_all_tracts_state <- pct_all_tracts_state %>%
 
   ## what's the demographic breakdown of those tracts?
   ## anything interesting about police departments in that area (this is a google question)
+
+#Joining per capita dataset to largest_counties_maj_black_poor_shootings
+largest_counties_maj_black_poor_shootings_w_per_capita <- largest_counties_maj_black_poor_shootings %>%
+  left_join(county_police_shootings_by_race_w_acs) %>%
+  select(NAME, race, count, estimate.af.am, estimate.white, county_per_capita_shootings_per_race, pct_all_maj_poor_black, pct_shootings_maj_black_poor, difference_in_shootings) 
+#Analysis
+largest_counties_maj_black_poor_shootings_w_per_capita %>%
+  arrange(difference_in_shootings)
+  #there is a 19.34% difference in shootings in Will County with black people being shot at a rate 17.18x that of white people
+  #there is a 20.39% difference in shootings in Marion County with black people being shot at a rate 4x that of white people
+largest_counties_maj_black_poor_shootings_w_per_capita %>%
+  arrange(desc(county_per_capita_shootings_per_race))
+  #Oklahoma County has the highest rate of per capita shootings for Black people, which is 5.52x that of white people
+  #Jackson County has the second highest rate of per capita shootings for Black people, which is 5.52x that of white people
+  #Franklin County has the third highest rate of per capita shootings for Black people, which is 6.18x that of white people
+  #LA has the fifth highest rate of per capita shootings for Black people, which is 4.43x that of white people
+  
 ```
